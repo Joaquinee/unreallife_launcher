@@ -1,7 +1,7 @@
 {
   "name": "unreallife_launcher",
   "productName": "unreallife_launcher",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Unreallife launcher by Joaquine",
   "main": ".vite/build/main.js",
   "scripts": {
@@ -11,11 +11,7 @@
     "publish": "electron-forge publish",
     "lint": "eslint --ext .ts,.tsx ."
   },
-  "standard": {
-    "global": [
-      "helpers"
-    ]
-  },
+
   "keywords": [],
   "author": {
     "name": "Joaquine",

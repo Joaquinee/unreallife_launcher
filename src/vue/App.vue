@@ -8,7 +8,7 @@
         <p className = "text-red-800">
             Désolé.
         </p>
-        <p id="version"></p>
+        <p id="version" className="text-blue-800"></p>
       </div>
     </div>
 </template>

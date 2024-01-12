@@ -35,7 +35,10 @@ import { ipcRenderer } from 'electron';
 createApp(App).mount('#app');
 
 
-const get = await window.a3url.getVersion();
+const get = window.a3url.getVersion();
+const TextV = document.getElementById('version');
+TextV.innerHTML = `Version : ${get}`;
+
 console.log(get);
 
 //console.log('👋 This message is being logged by "renderer.ts", included via Vite');
