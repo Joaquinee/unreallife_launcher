@@ -4,5 +4,5 @@ import { contextBridge, ipcRenderer } from "electron";
 
 
 contextBridge.exposeInMainWorld('a3url', {
-  getVersion: () => ipcRenderer.invoke('getVersion'),
+  getVersion: async () => ipcRenderer.invoke('getVersion'),
 })

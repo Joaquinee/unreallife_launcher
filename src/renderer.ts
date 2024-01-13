@@ -30,16 +30,21 @@ import './index.css';
 import $ from 'jquery';
 import { createApp } from 'vue';
 import App from './vue/App.vue';
-import { ipcRenderer } from 'electron';
+
+
 
 createApp(App).mount('#app');
 
 
-const get = window.a3url.getVersion();
-const TextV = document.getElementById('version');
-TextV.innerHTML = `Version : ${get}`;
 
-console.log(get);
+const updateVersion = async () => {
+    const version = await window.a3url.getVersion();
+    const textElement = document.getElementById('version');
+    textElement.innerHTML = `Version : ${version}`;
+  };
+  
 
-//console.log('👋 This message is being logged by "renderer.ts", included via Vite');
+updateVersion();
+  
+
 
