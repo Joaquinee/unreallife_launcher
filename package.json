@@ -1,7 +1,7 @@
 {
   "name": "unreallife_launcher",
   "productName": "unreallife_launcher",
-  "version": "1.0.6",
+  "version": "1.0.9",
   "description": "Unreallife launcher by Joaquine",
   "main": "./.vite/build/main.js",
   "scripts": {
@@ -52,11 +52,17 @@
     "@electron-forge/maker-dmg": "^7.2.0",
     "@electron-forge/maker-wix": "^7.2.0",
     "@electron-forge/publisher-github": "^7.2.0",
+    "@types/winreg": "^1.2.36",
+    "axios": "^1.6.5",
+    "crypto": "^1.0.1",
     "electron-builder": "^24.9.1",
+    "electron-dl": "^3.5.1",
     "electron-squirrel-startup": "^1.0.0",
     "electron-updater": "^6.1.7",
     "jquery": "^3.7.1",
+    "path-browserify": "^1.0.1",
     "vue": "^3.4.8",
+    "winreg": "^1.2.5",
     "winston": "^3.11.0"
   }
 }
