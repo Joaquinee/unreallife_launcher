@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('a3url', {
   setNewClientjson: async () => ipcRenderer.invoke('setNewClientjson'),
 })
 
+
 contextBridge.exposeInMainWorld('ipcRenderer', {
   receive: (channel: string, func: (arg0: any) => any) => {
     let validChannels = ['download-progress', 'download-name', 'app-ready'];

@@ -3,10 +3,13 @@ module.exports = {
   content: [
     './src/**/*.html',
     './src/**/*.vue',
+    'node_modules/preline/dist/*.js',
   ],
   theme: {
     extend: {},
   },
-  plugins: [],
+  plugins: [
+    require('preline/plugin'),
+  ],
 }
 

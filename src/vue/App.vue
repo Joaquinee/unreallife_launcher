@@ -7,6 +7,7 @@
         Cette fonctionnalité n'est pas encore disponible.
       </p>
       <p id = "version"></p>
+      <br>
       <button id="compareAndUpdateButton" @click="compareAndUpdate" :disabled="isButtonDisabled" className="btn bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline-blue active:bg-blue-800">
         {{ isButtonDisabled ? 'Vérification en cours ...' : 'Jouer' }}
       </button>
@@ -14,13 +15,11 @@
       <p id= "nombre" class="mt-4"></p>
       <p id ="name">En téléchargement : </p>
       <p>Pourcentage de téléchargement : {{ formatPercentage(downloadProgressPercent) }} </p>
-
-      <div class="flex flex-wrap p-4">
-      
+     
     </div>
-
-    </div>
+    
   </div>
+
 </template>
 
 <script setup>
@@ -28,10 +27,7 @@ import { ref, onMounted } from 'vue';
 
 const isButtonDisabled = ref(true);
 const isReady = ref(false);
-
 const downloadProgressPercent = ref(0);
-
-
 
 
 onMounted(() => {
@@ -40,7 +36,9 @@ onMounted(() => {
   window.ipcRenderer.receive('download-progress', (progress) => {
     downloadProgressPercent.value = progress;
   });
+
   window.ipcRenderer.receive('app-ready', (ready) => {
+    console.log('App ready :', ready);
     if (ready) {
       isReady.value = true;
       isButtonDisabled.value = false;  // Activer le bouton si l'application est prête

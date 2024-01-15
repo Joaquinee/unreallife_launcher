@@ -6,12 +6,8 @@ import { download } from "electron-dl"; // Importe la fonction download
 import Winreg from "winreg";
 import fs from "fs-extra";
 import * as crypto from 'crypto';
-import axios from "axios";
 
 
-
-//Other
-// Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require("electron-squirrel-startup")) {
   app.quit();
 }
@@ -55,29 +51,7 @@ const checkVersion = async (): Promise<void> => {
   }
 };
 
-async function sendVersion() {
-  const version = app.getVersion();
-  return version;
-}
-async function lastVersion() {
-  const get = fetch(AUTO_UPDATE_URL);
-  let res = (await get.then((res) => res.json())) ?? APP_VERSION;
-  return res.name;
-}
 
-function createNotification({
-  title = "",
-  body = "",
-}: {
-  title?: string;
-  body?: string;
-  icon?: string;
-  closeButtonText?: string;
-}) {
-  const icon = path.join(resourcesPath, "images", "icon.ico");
-  const closeButtonText = "fermer";
-  new ElectronNotification({ title, body, icon, closeButtonText }).show();
-}
 
 autoUpdater.on("error", (err) => {
   createWindow();
@@ -184,27 +158,7 @@ const createWindow = async () => {
     
   setupIpcHandlers();
 
-  //registre Arma path install and cerate folder @A3URL
-  const registryKey = new Winreg({
-    hive: Winreg.HKLM,
-    key: "\\SOFTWARE\\WOW6432Node\\bohemia interactive\\arma 3",
-  });
-
-  const getRegistryValue = (): Promise<any> => {
-    return new Promise((resolve, reject) => {
-      registryKey.get("main", (err, item) => {
-        if (err) {
-          reject(
-            new Error(
-              `Erreur lors de la récupération de la valeur du registre : ${err.message}`
-            )
-          );
-        } else {
-          resolve(item?.value || null);
-        }
-      });
-    });
-  };
+  
 
   const checkIfFolderExists = async (folderPath: string): Promise<boolean> => {
     try {
@@ -240,7 +194,7 @@ const createWindow = async () => {
 
   (async () => {
     try {
-      const registryValue = await getRegistryValue();
+      const registryValue = await PathArma3();
       if (registryValue) {
         const a3urlPath = path.join(registryValue, "@A3URL");
         const modsPath = path.join(a3urlPath, "addons");
@@ -298,6 +252,10 @@ const createWindow = async () => {
         const files = await fs.promises.readdir(addonsPath);
         const addonsInfo: AddonInfo[] = [];
     
+        let downloadDirectory = path.join(app.getPath("userData"), fileName)
+        
+        let serData = loadServerData();
+        console.log(serData)
         for (const fileName of files) {
           const filePath = path.join(addonsPath, fileName);
           const fileStat = await fs.promises.stat(filePath);
@@ -318,24 +276,38 @@ const createWindow = async () => {
       }
     };
   
-    const name = await getRegistryValue()
+    const name = await PathArma3()
     const a3urlPath = path.join(name, "@A3URL");
     const modsPath = path.join(a3urlPath, "addons");
     const addonsPath = modsPath; // Remplace cela par le vrai chemin
     
-   
+
+    const client = await loadClientData();
+    const server = await loadServerData();
     const outputPath = path.join(app.getPath("userData"), 'listClient.json');
-    const addonsList = await getAddonsList(addonsPath);
+    console.log(client.length, server.length)
+    
+    if (client.length == 0) {
+      const addonsList = await getAddonsList(addonsPath);
+      await fs.promises.writeFile(outputPath, JSON.stringify(addonsList, null, 2));
+      mainWindow.webContents.send('app-ready', true);
+      console.log(`Liste des addons sauvegardée avec succès : ${outputPath}`);
+    } else {
+      const change = await compareData(server, client);
+      console.log(change.length)
+      if (change.length == 0) {
+       
 
-    console.log('Mods local : ' + addonsList.length);
-    await fs.promises.writeFile(outputPath, JSON.stringify(addonsList, null, 2));
-    mainWindow.webContents.send('app-ready', true);
-    console.log(`Liste des addons sauvegardée avec succès : ${outputPath}`);
+        mainWindow.webContents.send('app-ready', true);
+    
+      } else {
+        const addonsList = await getAddonsList(addonsPath);
+        await fs.promises.writeFile(outputPath, JSON.stringify(addonsList, null, 2));
+        mainWindow.webContents.send('app-ready', true);
+        console.log(`Liste des addons sauvegardée avec succès : ${outputPath}`);
+      }
+    }
   })();
-
-
-  
-  
 
 };
 const setupIpcHandlers = async () => {
@@ -347,71 +319,31 @@ const setupIpcHandlers = async () => {
 
       const clientFilePath = path.join(app.getPath('userData'), 'listClient.json');
       const serverFilePath = path.join(app.getPath('userData'), 'listServer.json');
-
       try {
-
         await fs.remove(clientFilePath);
-
-        // Copie listServer.json avec le nouveau nom listClient.json
         await fs.copy(serverFilePath, clientFilePath);
-    
         console.log('Fichier copié avec succès.');
       } catch (error) {
         console.error(error.message);
       }
-    
-
     })
     ipcMain.handle("getLastestVersion", async () => {
       return lastVersion();
     });
     ipcMain.handle("getCompareData", async () => {
-      const loadServerData =  () => {
-        const filePath = path.join(app.getPath('userData'), 'listServer.json');
-        const data = fs.readFileSync(filePath, 'utf-8');
-        return JSON.parse(data);
-      };
-      const loadClientData = () => {
-        const filePath = path.join(app.getPath('userData'), 'listClient.json');
-        const data = fs.readFileSync(filePath, 'utf-8');
-        return JSON.parse(data);
-      };
-     
 
+      const serverData = await loadServerData();
+      const clientData = await loadClientData();
 
-      console.log('Mods serveur : ' + loadServerData().length, 'Mods local : ' + loadClientData().length);
       const deleteFilesNotInServer = async () => {
-        const serverData = loadServerData();
-        const clientData = loadClientData();
+       
     
         const filesToDelete = clientData.filter((clientFile: { name: any; }) => {
           return !serverData.some((serverFile: { name: any; }) => serverFile.name === clientFile.name);
         });
     
         filesToDelete.forEach(async (fileToDelete: { name: string; }) => {
-
-          const registryKey = new Winreg({
-            hive: Winreg.HKLM,
-            key: "\\SOFTWARE\\WOW6432Node\\bohemia interactive\\arma 3",
-          });
-        
-          const getRegistryValue = (): Promise<any> => {
-            return new Promise((resolve, reject) => {
-              registryKey.get("main", (err, item) => {
-                if (err) {
-                  reject(
-                    new Error(
-                      `Erreur lors de la récupération de la valeur du registre : ${err.message}`
-                    )
-                  );
-                } else {
-                  resolve(item?.value || null);
-                }
-              });
-            });
-          };
-          
-          const registryValue = await getRegistryValue();
+            const registryValue = await PathArma3();
             if (registryValue) {
             const a3urlPath = path.join(registryValue, "@A3URL");
             const modsPath = path.join(a3urlPath, "addons");
@@ -431,52 +363,14 @@ const setupIpcHandlers = async () => {
       });
        
       };
-    
-      const compareData = async  (serverData: any, clientData: any) => {
-        const addonsToUpdate: any[] = [];
-      
-        for (const serverAddon of serverData) {
-          const clientAddon = clientData.find((addon: any) => addon.name === serverAddon.name);
-      
-          if (!clientAddon || clientAddon.hash !== serverAddon.hash || clientAddon.size !== serverAddon.size) {
-            addonsToUpdate.push(serverAddon);
-          }
-        }
-      
-        return addonsToUpdate;
-      };
-      const serverData = loadServerData();
-      const clientData = loadClientData();
       const addonsToUpdate = await compareData(serverData, clientData);
       await deleteFilesNotInServer()
       return addonsToUpdate;
      
     });
-      ipcMain.handle('dowloadMods', async (event, name) => {
+    ipcMain.handle('dowloadMods', async (event, name) => {
         let url = "http://188.165.200.136/mods/" + name;
-
-        const registryKey = new Winreg({
-          hive: Winreg.HKLM,
-          key: "\\SOFTWARE\\WOW6432Node\\bohemia interactive\\arma 3",
-        });
-      
-        const getRegistryValue = (): Promise<any> => {
-          return new Promise((resolve, reject) => {
-            registryKey.get("main", (err, item) => {
-              if (err) {
-                reject(
-                  new Error(
-                    `Erreur lors de la récupération de la valeur du registre : ${err.message}`
-                  )
-                );
-              } else {
-                resolve(item?.value || null);
-              }
-            });
-          });
-        };
-        
-        const registryValue = await getRegistryValue();
+        const registryValue = await PathArma3();
         if (registryValue) {
         const a3urlPath = path.join(registryValue, "@A3URL");
         const modsPath = path.join(a3urlPath, "addons");
@@ -495,6 +389,9 @@ const setupIpcHandlers = async () => {
               },
               onStarted(dl) { 
                 mainWindow.webContents.send('download-name', dl.getFilename());
+              },
+              onCompleted(dl) { 
+                mainWindow.webContents.send('download-stop', false);
               },
               errorMessage: 'Erreur lors du téléchargement du fichier.',
             })
@@ -547,3 +444,81 @@ app.on("activate", () => {
 process.on("unhandledRejection", (reason, _promise) => {
   console.error("Unhandled Promise Rejection:", reason, _promise);
 });
+
+
+
+
+//All Function
+async function loadServerData() {
+  const filePath = path.join(app.getPath('userData'), 'listServer.json');
+  const data = fs.readFileSync(filePath, 'utf-8')
+  return JSON.parse(data);
+}
+async function loadClientData () {
+  const filePath = path.join(app.getPath('userData'), 'listClient.json');
+  if (!fs.existsSync(filePath)) {
+    await fs.promises.writeFile(filePath, JSON.stringify([]));
+  }
+  const data = fs.readFileSync(filePath, 'utf-8');
+  return JSON.parse(data);
+};
+async function sendVersion() {
+  const version = app.getVersion();
+  return version;
+}
+async function lastVersion() {
+  const get = fetch(AUTO_UPDATE_URL);
+  let res = (await get.then((res) => res.json())) ?? APP_VERSION;
+  return res.name;
+}
+
+async function createNotification({
+  title = "",
+  body = "",
+}: {
+  title?: string;
+  body?: string;
+  icon?: string;
+  closeButtonText?: string;
+}) {
+  const icon = path.join(resourcesPath, "images", "icon.ico");
+  const closeButtonText = "fermer";
+  new ElectronNotification({ title, body, icon, closeButtonText }).show();
+}
+
+async function PathArma3() {
+  const registryKey = new Winreg({
+    hive: Winreg.HKLM,
+    key: "\\SOFTWARE\\WOW6432Node\\bohemia interactive\\arma 3",
+  });
+
+  const getRegistryValue = (): Promise<any> => {
+    return new Promise((resolve, reject) => {
+      registryKey.get("main", (err, item) => {
+        if (err) {
+          reject(
+            new Error(
+              `Erreur lors de la récupération de la valeur du registre : ${err.message}`
+            )
+          );
+        } else {
+          resolve(item?.value || null);
+        }
+      });
+    });
+  };
+  return await getRegistryValue();
+  
+}
+
+async function compareData(serverData: any, clientData: any) {
+
+    const addonsToUpdate: any[] = [];
+    for (const serverAddon of serverData) {
+      const clientAddon = clientData.find((addon: any) => addon.name === serverAddon.name);
+      if (!clientAddon || clientAddon.hash !== serverAddon.hash || clientAddon.size !== serverAddon.size) {
+        addonsToUpdate.push(serverAddon);
+      }
+    }
+    return addonsToUpdate;
+}
