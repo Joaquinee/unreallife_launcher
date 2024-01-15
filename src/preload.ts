@@ -8,11 +8,12 @@ contextBridge.exposeInMainWorld('a3url', {
   getLastestVersion: async () => ipcRenderer.invoke('getLastestVersion'),
   getCompareData: async () => ipcRenderer.invoke('getCompareData'),
   dowloadMods: async (url: string) => ipcRenderer.invoke('dowloadMods', url),
+  setNewClientjson: async () => ipcRenderer.invoke('setNewClientjson'),
 })
 
 contextBridge.exposeInMainWorld('ipcRenderer', {
   receive: (channel: string, func: (arg0: any) => any) => {
-    let validChannels = ['download-progress', 'download-name'];
+    let validChannels = ['download-progress', 'download-name', 'app-ready'];
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (event: any, ...args: any) => func(...args));
     }

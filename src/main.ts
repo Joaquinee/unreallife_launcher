@@ -4,7 +4,7 @@ import { createLogger, transports } from "winston"; // Utilisez le module de jou
 import { Notification as ElectronNotification } from "electron";
 import { download } from "electron-dl"; // Importe la fonction download
 import Winreg from "winreg";
-import * as fs from "fs";
+import fs from "fs-extra";
 import * as crypto from 'crypto';
 import axios from "axios";
 
@@ -265,8 +265,6 @@ const createWindow = async () => {
     } catch (error) {
       console.error(error.message);
     }
-
-
     
     //Addons base
     interface AddonInfo {
@@ -331,10 +329,8 @@ const createWindow = async () => {
 
     console.log('Mods local : ' + addonsList.length);
     await fs.promises.writeFile(outputPath, JSON.stringify(addonsList, null, 2));
+    mainWindow.webContents.send('app-ready', true);
     console.log(`Liste des addons sauvegardée avec succès : ${outputPath}`);
-
-
-
   })();
 
 
@@ -347,6 +343,25 @@ const setupIpcHandlers = async () => {
     ipcMain.handle("getVersion", async () => {
       return sendVersion();
     });
+    ipcMain.handle("setNewClientjson", async () => {
+
+      const clientFilePath = path.join(app.getPath('userData'), 'listClient.json');
+      const serverFilePath = path.join(app.getPath('userData'), 'listServer.json');
+
+      try {
+
+        await fs.remove(clientFilePath);
+
+        // Copie listServer.json avec le nouveau nom listClient.json
+        await fs.copy(serverFilePath, clientFilePath);
+    
+        console.log('Fichier copié avec succès.');
+      } catch (error) {
+        console.error(error.message);
+      }
+    
+
+    })
     ipcMain.handle("getLastestVersion", async () => {
       return lastVersion();
     });
@@ -361,7 +376,63 @@ const setupIpcHandlers = async () => {
         const data = fs.readFileSync(filePath, 'utf-8');
         return JSON.parse(data);
       };
-      const compareData = (serverData: any, clientData: any) => {
+     
+
+
+      console.log('Mods serveur : ' + loadServerData().length, 'Mods local : ' + loadClientData().length);
+      const deleteFilesNotInServer = async () => {
+        const serverData = loadServerData();
+        const clientData = loadClientData();
+    
+        const filesToDelete = clientData.filter((clientFile: { name: any; }) => {
+          return !serverData.some((serverFile: { name: any; }) => serverFile.name === clientFile.name);
+        });
+    
+        filesToDelete.forEach(async (fileToDelete: { name: string; }) => {
+
+          const registryKey = new Winreg({
+            hive: Winreg.HKLM,
+            key: "\\SOFTWARE\\WOW6432Node\\bohemia interactive\\arma 3",
+          });
+        
+          const getRegistryValue = (): Promise<any> => {
+            return new Promise((resolve, reject) => {
+              registryKey.get("main", (err, item) => {
+                if (err) {
+                  reject(
+                    new Error(
+                      `Erreur lors de la récupération de la valeur du registre : ${err.message}`
+                    )
+                  );
+                } else {
+                  resolve(item?.value || null);
+                }
+              });
+            });
+          };
+          
+          const registryValue = await getRegistryValue();
+            if (registryValue) {
+            const a3urlPath = path.join(registryValue, "@A3URL");
+            const modsPath = path.join(a3urlPath, "addons");
+
+          try {
+              fs.unlinkSync(modsPath + '/' + fileToDelete.name);
+              const index = clientData.findIndex((addon: any) => addon.name === fileToDelete.name);
+              clientData.splice(index, 1);
+              const outputPath = path.join(app.getPath("userData"), 'listClient.json');
+              await fs.promises.writeFile(outputPath, JSON.stringify(clientData, null, 2));
+              console.log(`Le fichier ${fileToDelete.name} a été supprimé avec succès.`);
+          } catch (err) {
+              console.error(`Erreur lors de la suppression du fichier ${fileToDelete.name}:`, err);
+          }
+              
+        }
+      });
+       
+      };
+    
+      const compareData = async  (serverData: any, clientData: any) => {
         const addonsToUpdate: any[] = [];
       
         for (const serverAddon of serverData) {
@@ -376,7 +447,8 @@ const setupIpcHandlers = async () => {
       };
       const serverData = loadServerData();
       const clientData = loadClientData();
-      const addonsToUpdate = compareData(serverData, clientData);
+      const addonsToUpdate = await compareData(serverData, clientData);
+      await deleteFilesNotInServer()
       return addonsToUpdate;
      
     });
@@ -438,6 +510,7 @@ const setupIpcHandlers = async () => {
         };
 
         await downloadFile(url, name)
+
       }
         
       
