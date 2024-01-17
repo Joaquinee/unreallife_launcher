@@ -1,7 +1,7 @@
 {
   "name": "unreallife_launcher",
   "productName": "unreallife_launcher",
-  "version": "2.0.1",
+  "version": "2.0.5",
   "description": "Unreallife launcher by Joaquine",
   "main": "./.vite/build/main.js",
   "scripts": {
@@ -52,6 +52,8 @@
     "@electron-forge/maker-dmg": "^7.2.0",
     "@electron-forge/maker-wix": "^7.2.0",
     "@electron-forge/publisher-github": "^7.2.0",
+    "@preline/carousel": "^2.0.2",
+    "@preline/tabs": "^2.0.2",
     "@types/winreg": "^1.2.36",
     "axios": "^1.6.5",
     "crypto": "^1.0.1",
@@ -64,6 +66,7 @@
     "path-browserify": "^1.0.1",
     "preline": "^2.0.3",
     "vue": "^3.4.8",
+    "vue-router": "^4.2.5",
     "winreg": "^1.2.5",
     "winston": "^3.11.0"
   }

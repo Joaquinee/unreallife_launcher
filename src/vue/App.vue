@@ -1,89 +1,39 @@
 <template>
-  <div class="flex flex-col items-center justify-center h-full font-typoldRegular tracking-tight p-10">
-    <div class="flex flex-col items-center justify-center mb-8">
-      <img src="../images/icon.png" alt="Description de l'image" class="mb-4" />
-
-      <p class="text-red-800 mb-2">
-        Cette fonctionnalité n'est pas encore disponible.
-      </p>
-      <p id = "version"></p>
-      <br>
-      <button id="compareAndUpdateButton" @click="compareAndUpdate" :disabled="isButtonDisabled" className="btn bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline-blue active:bg-blue-800">
-        {{ isButtonDisabled ? 'Vérification en cours ...' : 'Jouer' }}
-      </button>
-
-      <p id= "nombre" class="mt-4"></p>
-      <p id ="name">En téléchargement : </p>
-      <p>Pourcentage de téléchargement : {{ formatPercentage(downloadProgressPercent) }} </p>
-     
+  <Annonce />
+  <div>
+    <div class="border-b border-gray-200 dark:border-gray-700">
+      <nav class="flex space-x-2" aria-label="Tabs" role="tablist">
+        <button type="button" class="hs-tab-active:font-semibold hs-tab-active:border-blue-600 hs-tab-active:text-blue-600 py-4 px-1 inline-flex items-center gap-x-2 border-b-2 border-transparent text-sm whitespace-nowrap text-gray-500 hover:text-blue-600 focus:outline-none focus:text-blue-600 disabled:opacity-50 disabled:pointer-events-none dark:text-gray-400 dark:hover:text-blue-500 active" id="tabs-with-icons-item-1" data-hs-tab="#tabs-with-icons-1" aria-controls="tabs-with-icons-1" role="tab">
+          <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          Bienvenue
+        </button>
+        <button type="button" class="hs-tab-active:font-semibold hs-tab-active:border-blue-600 hs-tab-active:text-blue-600 py-4 px-1 inline-flex items-center gap-x-2 border-b-2 border-transparent text-sm whitespace-nowrap text-gray-500 hover:text-blue-600 focus:outline-none focus:text-blue-600 disabled:opacity-50 disabled:pointer-events-none dark:text-gray-400 dark:hover:text-blue-500" id="tabs-with-icons-item-2" data-hs-tab="#tabs-with-icons-2" aria-controls="tabs-with-icons-2" role="tab">
+          <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          Les mods
+        </button>
+      
+      </nav>
     </div>
-    
-  </div>
+      <div id="tabs-with-icons-1" role="tabpanel" aria-labelledby="tabs-with-icons-item-1">
+        <p class="text-gray-500 dark:text-gray-400">
+          <Welcome />
+      </p>
+      </div>
+      <div id="tabs-with-icons-2" class="hidden" role="tabpanel" aria-labelledby="tabs-with-icons-item-3">
+        <p class="text-gray-500 dark:text-gray-400">
+          <Home />
+        </p>
+      </div>
+    </div>
 
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-
-const isButtonDisabled = ref(true);
-const isReady = ref(false);
-const downloadProgressPercent = ref(0);
+import Annonce from './Annonce.vue';
+import Home from './Home.vue';
+import Welcome from './Welcome.vue';
 
 
-onMounted(() => {
 
-
-  window.ipcRenderer.receive('download-progress', (progress) => {
-    downloadProgressPercent.value = progress;
-  });
-
-  window.ipcRenderer.receive('app-ready', (ready) => {
-    console.log('App ready :', ready);
-    if (ready) {
-      isReady.value = true;
-      isButtonDisabled.value = false;  // Activer le bouton si l'application est prête
-    }
-  });
-
-  window.ipcRenderer.receive('download-name', (name) => {
-    document.getElementById("name").innerHTML = name;
-  });
-});
-const formatPercentage = (percentage) => {
-  // Formater le pourcentage avec deux décimales
-  return (percentage * 100).toFixed(2) + '%';
-};
-
-const compareAndUpdate = async () => {
-  if (!isReady) return;
-
-  try {
-    const addonsToUpdate = await window.a3url.getCompareData();
-    const nombre = addonsToUpdate.length;
-    if (nombre > 0) {
-      isButtonDisabled.value = true;
-      return;
-    }
-    document.getElementById("nombre").innerHTML = `Ils vous manquent ${nombre} addons`;
-    let nbr = nombre;
- 
-   
-    for (const element of addonsToUpdate) {
-      await window.a3url.dowloadMods(element.name);
-      nbr--;
-      document.getElementById("nombre").innerHTML = `Ils vous manquent ${nbr} addons`;
-    }
-    await window.a3url.setNewClientjson();
-
-    
-  } catch (error) {
-    console.error('Erreur lors de la comparaison et de la mise à jour :', error);
-  } finally {
-    
-    document.getElementById("name").innerHTML = "";
-    document.getElementById("nombre").innerHTML = `Tous vos addons sont à jour`;
-    isButtonDisabled.value = false;
-  }
-};
 </script>
 

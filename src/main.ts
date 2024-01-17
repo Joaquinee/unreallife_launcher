@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, autoUpdater } from "electron";
+import { app, BrowserWindow, ipcMain, autoUpdater, shell } from "electron";
 import path from "path";
 import { createLogger, transports } from "winston"; // Utilisez le module de journalisation Winston
 import { Notification as ElectronNotification } from "electron";
@@ -185,14 +185,12 @@ const createWindow = async () => {
       directory: path.dirname(savePath),
       filename: path.basename(savePath),
       overwrite: true,
-      onProgress(progress) {
-        window.webContents.send("downloadProgress", progress.percent);
-      },
       errorMessage: "Erreur lors du téléchargement du fichier.",
     });
   };
 
   (async () => {
+    
     try {
       const registryValue = await PathArma3();
       if (registryValue) {
@@ -201,15 +199,18 @@ const createWindow = async () => {
         await createFolderIfNotExists(a3urlPath);
         await createFolderIfNotExists(modsPath);
 
-        const logoUrl = "http://188.165.200.136/mods/logo.paa";
+        const logoUrl = "http://188.165.200.136/other/logo.paa";
         const logoSavePath = path.join(a3urlPath, "logo.paa");
         await downloadFile(mainWindow, logoUrl, logoSavePath);
 
         
-        const modUrl = "http://188.165.200.136/mods/mod.cpp";
+        const modUrl = "http://188.165.200.136/other/mod.cpp";
         const modSavePath = path.join(a3urlPath, "mod.cpp");
         await downloadFile(mainWindow, modUrl, modSavePath);
 
+        const tfr = "http://188.165.200.136/other/task_force_radio.ts3_plugin";
+        const tfrPath = path.join(a3urlPath, "task_force_radio.ts3_plugin");
+        await downloadFile(mainWindow, tfr, tfrPath);
         console.log(
           "Les fichiers logo.paa et mod.cpp ont été téléchargés avec succès."
         );
@@ -251,11 +252,6 @@ const createWindow = async () => {
       try {
         const files = await fs.promises.readdir(addonsPath);
         const addonsInfo: AddonInfo[] = [];
-    
-        let downloadDirectory = path.join(app.getPath("userData"), fileName)
-        
-        let serData = loadServerData();
-        console.log(serData)
         for (const fileName of files) {
           const filePath = path.join(addonsPath, fileName);
           const fileStat = await fs.promises.stat(filePath);
@@ -276,6 +272,9 @@ const createWindow = async () => {
       }
     };
   
+    
+
+
     const name = await PathArma3()
     const a3urlPath = path.join(name, "@A3URL");
     const modsPath = path.join(a3urlPath, "addons");
@@ -285,24 +284,31 @@ const createWindow = async () => {
     const client = await loadClientData();
     const server = await loadServerData();
     const outputPath = path.join(app.getPath("userData"), 'listClient.json');
-    console.log(client.length, server.length)
+
+    let version = await sendVersion();
+    let lv = await lastVersion();
+    let text = "Version actuelle : " + version + "\n" + "Dernière version : " + lv;
+    mainWindow.webContents.send("getVersion", text);
+
+
     
     if (client.length == 0) {
+      console.log('Liste des addons vide, téléchargement de la liste du serveur.')
+      console.log('Vérification des fichiers...')
       const addonsList = await getAddonsList(addonsPath);
-      await fs.promises.writeFile(outputPath, JSON.stringify(addonsList, null, 2));
+      console.log(`Liste des addons chargée avec succès : ${addonsPath}`);
+      await writeListClient(addonsList);
       mainWindow.webContents.send('app-ready', true);
       console.log(`Liste des addons sauvegardée avec succès : ${outputPath}`);
     } else {
       const change = await compareData(server, client);
       console.log(change.length)
       if (change.length == 0) {
-       
-
         mainWindow.webContents.send('app-ready', true);
-    
       } else {
         const addonsList = await getAddonsList(addonsPath);
-        await fs.promises.writeFile(outputPath, JSON.stringify(addonsList, null, 2));
+        console.log(`Liste des addons chargée avec succès : ${addonsPath}`);
+        await writeListClient(addonsList);
         mainWindow.webContents.send('app-ready', true);
         console.log(`Liste des addons sauvegardée avec succès : ${outputPath}`);
       }
@@ -312,9 +318,8 @@ const createWindow = async () => {
 };
 const setupIpcHandlers = async () => {
   if (!mainWindow || !loadWindow) {
-    ipcMain.handle("getVersion", async () => {
-      return sendVersion();
-    });
+    
+    
     ipcMain.handle("setNewClientjson", async () => {
 
       const clientFilePath = path.join(app.getPath('userData'), 'listClient.json');
@@ -327,9 +332,54 @@ const setupIpcHandlers = async () => {
         console.error(error.message);
       }
     })
-    ipcMain.handle("getLastestVersion", async () => {
-      return lastVersion();
-    });
+    ipcMain.handle("launchDiscord", async () => {
+       shell.openExternal("https://discord.gg/fhx5aFMeFE")
+    })
+    ipcMain.handle("launchTs", async () => {
+       shell.openExternal("ts3server://ts3.btrteam.fr?port=52432")
+    })
+    ipcMain.handle("tfar", async () => {
+      await getTs3Path().then(async (value) => {
+        if (value) {
+          const pathExe = path.join(value, "package_inst.exe");
+          
+          const registryValue = await PathArma3();
+          if (registryValue) {
+            const tfrPath = path.join(registryValue, "@A3URL", "task_force_radio.ts3_plugin");
+            const { spawn } = require('child_process');
+            spawn(pathExe, [tfrPath]);
+          }
+        }
+
+  
+      })
+       
+    })
+    ipcMain.handle("launcGame", async () => {
+
+      const registryValue = await PathArma3();
+      if (registryValue) {
+        const a3urlPath = path.join(registryValue, "@A3URL");
+        const arma3exe = path.join(registryValue, "arma3.exe");
+
+
+            // Assurez-vous que le répertoire des mods existe
+        if (fs.existsSync(a3urlPath)) {
+          // Ajoutez ici la logique pour lancer le jeu avec les mods
+          console.log(`Lancement du jeu avec les mods depuis : ${a3urlPath}`);
+          
+          // Vous pouvez utiliser spawn ou exec pour lancer le jeu avec les paramètres appropriés
+          const { spawn } = require('child_process');
+          spawn(arma3exe, ['-mod=' + a3urlPath]);
+
+          console.log('Jeu lancé avec succès.');
+        } else {
+          console.error('Le répertoire des mods spécifié n\'existe pas.');
+        }
+        console.error('Lancement du jeu.');
+      }
+    
+    })
     ipcMain.handle("getCompareData", async () => {
 
       const serverData = await loadServerData();
@@ -389,6 +439,7 @@ const setupIpcHandlers = async () => {
               },
               onStarted(dl) { 
                 mainWindow.webContents.send('download-name', dl.getFilename());
+                mainWindow.webContents.send('isdownload', true);
               },
               onCompleted(dl) { 
                 mainWindow.webContents.send('download-stop', false);
@@ -407,6 +458,7 @@ const setupIpcHandlers = async () => {
         };
 
         await downloadFile(url, name)
+        console.log('Téléchargement terminé.');
 
       }
         
@@ -449,6 +501,15 @@ process.on("unhandledRejection", (reason, _promise) => {
 
 
 //All Function
+async function writeListClient(data: any) {
+  const filePath = path.join(app.getPath('userData'), 'listClient.json');
+  if (!fs.existsSync(filePath)) {
+    await fs.promises.writeFile(filePath, JSON.stringify(data, null, 2));
+  } else {
+    await fs.remove(filePath);
+    await fs.promises.writeFile(filePath, JSON.stringify(data, null, 2));
+  }
+}
 async function loadServerData() {
   const filePath = path.join(app.getPath('userData'), 'listServer.json');
   const data = fs.readFileSync(filePath, 'utf-8')
@@ -510,6 +571,37 @@ async function PathArma3() {
   return await getRegistryValue();
   
 }
+async function getTs3Path() {
+  const registryKey = new Winreg({
+    hive: Winreg.HKLM,
+    key: "\\SOFTWARE\\TeamSpeak 3 Client",
+  });
+
+  const getRegistryValue = (): Promise<any> => {
+    return new Promise((resolve, reject) => {
+      registryKey.get(Winreg.DEFAULT_VALUE, (err, item) => {
+        if (err) {
+          reject(
+            new Error(
+              `Erreur lors de la récupération de la valeur du registre : ${err.message}`
+            )
+          );
+        } else {
+          resolve(item?.value || null);
+        }
+      });
+    });
+  };
+  try {
+    const registryValue = await getRegistryValue();
+    return registryValue;
+  } catch (error) {
+    console.error("Erreur lors de la récupération du chemin du registre :", error.message);
+    throw error; // Vous pouvez choisir de gérer l'erreur de manière appropriée ici
+  }
+}
+  
+
 
 async function compareData(serverData: any, clientData: any) {
 

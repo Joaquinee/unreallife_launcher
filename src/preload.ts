@@ -4,17 +4,19 @@ import { contextBridge, ipcRenderer } from "electron";
 
 
 contextBridge.exposeInMainWorld('a3url', {
-  getVersion: async () => ipcRenderer.invoke('getVersion'),
-  getLastestVersion: async () => ipcRenderer.invoke('getLastestVersion'),
   getCompareData: async () => ipcRenderer.invoke('getCompareData'),
   dowloadMods: async (url: string) => ipcRenderer.invoke('dowloadMods', url),
   setNewClientjson: async () => ipcRenderer.invoke('setNewClientjson'),
+  launcGame: async () => ipcRenderer.invoke('launcGame'),
+  tfar: async () => ipcRenderer.invoke('tfar'),
+  launchTs: async () => ipcRenderer.invoke('launchTs'),
+  launchDiscord: async () => ipcRenderer.invoke('launchDiscord'),
 })
 
 
 contextBridge.exposeInMainWorld('ipcRenderer', {
   receive: (channel: string, func: (arg0: any) => any) => {
-    let validChannels = ['download-progress', 'download-name', 'app-ready'];
+    let validChannels = ['download-progress', 'download-name', 'app-ready', 'isdownload', 'download-stop', 'getVersion'];
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (event: any, ...args: any) => func(...args));
     }
