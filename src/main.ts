@@ -6,6 +6,10 @@ import { download } from "electron-dl"; // Importe la fonction download
 import Winreg from "winreg";
 import fs from "fs-extra";
 import * as crypto from 'crypto';
+import SteamID from 'steamid';
+
+
+
 
 
 if (require("electron-squirrel-startup")) {
@@ -58,6 +62,7 @@ autoUpdater.on("error", (err) => {
   createNotification({
     title: "Une erreur est survenue !",
     body: "Une nouvelle version est disponible, mais impossible de la télécharger.",
+
   });
   logger.error("Erreur lors de la mise à jour :", err);
 });
@@ -290,11 +295,25 @@ const createWindow = async () => {
     let text = "Version actuelle : " + version + "\n" + "Dernière version : " + lv;
     mainWindow.webContents.send("getVersion", text);
 
+    const test = await getSteamid();
+    const get = await getPlayerbyPid(test);
+    mainWindow.webContents.send('player', get);
+    
 
     
     if (client.length == 0) {
       console.log('Liste des addons vide, téléchargement de la liste du serveur.')
       console.log('Vérification des fichiers...')
+
+
+      mainWindow.webContents.send('notif', {
+        title: "Bienvenue sur UnrealLife Launcher",
+        message: "Cliquer sur Jouer pour télécharger les mods du servers",
+        type: "info",
+        duration: 10000
+      })
+
+
       const addonsList = await getAddonsList(addonsPath);
       console.log(`Liste des addons chargée avec succès : ${addonsPath}`);
       await writeListClient(addonsList);
@@ -306,6 +325,13 @@ const createWindow = async () => {
       if (change.length == 0) {
         mainWindow.webContents.send('app-ready', true);
       } else {
+        mainWindow.webContents.send('notif', {
+          title: "Bienvenue sur UnrealLife Launcher",
+          message: "Une mise à jour est disponible, cliquer sur Jouer pour télécharger les mods du server",
+          type: "info",
+          duration: 10000
+        })
+
         const addonsList = await getAddonsList(addonsPath);
         console.log(`Liste des addons chargée avec succès : ${addonsPath}`);
         await writeListClient(addonsList);
@@ -327,6 +353,13 @@ const setupIpcHandlers = async () => {
       try {
         await fs.remove(clientFilePath);
         await fs.copy(serverFilePath, clientFilePath);
+        mainWindow.webContents.send('notif', {
+          title: "Mods à jours",
+          message: "Les mods sont à jours",
+          type: "info",
+          duration: 10000
+        })
+
         console.log('Fichier copié avec succès.');
       } catch (error) {
         console.error(error.message);
@@ -335,6 +368,7 @@ const setupIpcHandlers = async () => {
     ipcMain.handle("launchDiscord", async () => {
        shell.openExternal("https://discord.gg/fhx5aFMeFE")
     })
+   
     ipcMain.handle("launchTs", async () => {
        shell.openExternal("ts3server://ts3.btrteam.fr?port=52432")
     })
@@ -467,21 +501,6 @@ const setupIpcHandlers = async () => {
     
   }
 };
-
-
-
-
-// Fonction pour charger les données du serveur
-
-
-
-// Fonction pour comparer les données du serveur et du client
-
-
-
-
-
-
 app.on("ready", getLastestVersion);
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
@@ -531,6 +550,11 @@ async function lastVersion() {
   const get = fetch(AUTO_UPDATE_URL);
   let res = (await get.then((res) => res.json())) ?? APP_VERSION;
   return res.name;
+}
+async function getPlayerbyPid(pid: any) {
+  const get = fetch("http://188.165.200.136:3000/playersByPid/" + pid);
+  let res = (await get.then((res) => res.json())) ?? "undefined";
+  return res;
 }
 
 async function createNotification({
@@ -602,7 +626,37 @@ async function getTs3Path() {
 }
   
 
+async function getSteamid() {
+  const registryKey = new Winreg({
+    hive: Winreg.HKCU,
+    key: "\\Software\\Valve\\Steam\\ActiveProcess",
+  });
 
+  const getRegistryValue = (): Promise<any> => {
+    return new Promise((resolve, reject) => {
+      registryKey.get("ActiveUser", (err, item) => {
+        if (err) {
+          reject(
+            new Error(
+              `Erreur lors de la récupération de la valeur du registre : ${err.message}`
+            )
+          );
+        } else {
+          resolve(item?.value || null);
+        }
+      });
+    });
+  };
+  try {
+    const registryValue = await getRegistryValue();
+    const steamIdDecimal = parseInt(registryValue, 16);
+    const final =  SteamID.fromIndividualAccountID(steamIdDecimal);
+    return final.getSteamID64();
+  } catch (error) {
+    console.error("Erreur lors de la récupération du chemin du registre :", error.message);
+    throw error; // Vous pouvez choisir de gérer l'erreur de manière appropriée ici
+  }
+}
 async function compareData(serverData: any, clientData: any) {
 
     const addonsToUpdate: any[] = [];

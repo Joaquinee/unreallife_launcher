@@ -3,6 +3,7 @@
 import { contextBridge, ipcRenderer } from "electron";
 
 
+
 contextBridge.exposeInMainWorld('a3url', {
   getCompareData: async () => ipcRenderer.invoke('getCompareData'),
   dowloadMods: async (url: string) => ipcRenderer.invoke('dowloadMods', url),
@@ -16,7 +17,7 @@ contextBridge.exposeInMainWorld('a3url', {
 
 contextBridge.exposeInMainWorld('ipcRenderer', {
   receive: (channel: string, func: (arg0: any) => any) => {
-    let validChannels = ['download-progress', 'download-name', 'app-ready', 'isdownload', 'download-stop', 'getVersion'];
+    let validChannels = ['download-progress', 'download-name', 'app-ready', 'isdownload', 'download-stop', 'getVersion', 'player', 'notif'];
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (event: any, ...args: any) => func(...args));
     }

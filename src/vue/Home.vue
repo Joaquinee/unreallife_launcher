@@ -38,7 +38,6 @@ const isReady = ref(false);
 const downloadProgressPercent = ref(0);
 const isDown = ref(false);
 
-
 onMounted(() => {
   window.ipcRenderer.receive('getVersion', (version) => {
     document.getElementById("version").innerHTML = version;
