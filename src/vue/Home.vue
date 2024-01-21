@@ -14,6 +14,7 @@
   </div>
   <p id= "nombre" class="mt-2"></p>
   <p id ="name" class="mt-2"></p>
+  <p id="transfer"></p>
   <div v-if="isDown">
   
     <div :class="'inline-block mb-2 ms-[calc('+formatBar(downloadProgressPercent)+'-1.25rem)] py-0.5 px-1.5 bg-blue-50 border border-blue-200 text-xs font-medium text-blue-600 rounded-lg dark:bg-blue-800/30 dark:border-blue-800 dark:text-blue-500'">{{ formatBar(downloadProgressPercent) }}</div>
@@ -36,14 +37,21 @@ const isButtonDisabled = ref(true);
 const launcharman = ref(false);
 const isReady = ref(false);
 const downloadProgressPercent = ref(0);
+
+const transfer = ref(0);
+const total = ref(0);
+
+
 const isDown = ref(false);
 
 onMounted(() => {
-  window.ipcRenderer.receive('getVersion', (version) => {
-    document.getElementById("version").innerHTML = version;
-  });
   window.ipcRenderer.receive('download-progress', (progress) => {
     downloadProgressPercent.value = progress;
+  });
+  window.ipcRenderer.receive('download-bytes', (data) => {
+    transfer.value = data.transfer;
+    total.value = data.total;
+    document.getElementById("transfer").innerHTML = `(${formatBytes(transfer.value)} / ${formatBytes(total.value)})`;
   });
   window.ipcRenderer.receive('download-stop', (stpdwn) => {
     isDown.value = stpdwn;
@@ -76,6 +84,17 @@ const simpleFormat = (percentage) => {
 
 const installTFR = async () => {
     await window.a3url.tfar();
+}
+
+function formatBytes(bytes, decimals = 2) {
+    if (!+bytes) return '0 Bytes'
+    const k = 1024
+    const dm = decimals < 0 ? 0 : decimals
+    const sizes = ['Bytes', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB']
+
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`
 }
 
 const compareAndUpdate = async () => {

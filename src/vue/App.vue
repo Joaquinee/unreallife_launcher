@@ -27,20 +27,20 @@
       </div>
     </div>
 
+  <Online/>
 </template>
 
 <script setup>
 import { onMounted, ref } from 'vue';
 import Home from './Home.vue';
+import Online from './Online.vue';
 import Welcome from './Welcome.vue';
 import { useNotification } from "@kyvg/vue3-notification";
 const { notify } = useNotification()
 const player = ref(null);
 
 
-
 onMounted(async () => {
-
   window.ipcRenderer.receive('notif', (data) => {
     notify({
       title: data.title,
@@ -60,11 +60,7 @@ onMounted(async () => {
       duration: 10000
     });
   });
-
-
-
 })
-
 const getHello = () => {
   const h = new Date().getHours();
   if (h >= 6 && h < 17) {

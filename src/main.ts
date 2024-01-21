@@ -220,7 +220,12 @@ const createWindow = async () => {
           "Les fichiers logo.paa et mod.cpp ont été téléchargés avec succès."
         );
       } else {
-        console.log("La valeur du registre est null ou undefined.");
+        mainWindow.webContents.send('notif', {
+          title: "Erreur",
+          message: "Impossible de trouver le chemin",
+          type: "error",
+          duration: 10000
+        })
       }
     } catch (error) {
       console.error(error.message);
@@ -382,6 +387,13 @@ const setupIpcHandlers = async () => {
             const tfrPath = path.join(registryValue, "@A3URL", "task_force_radio.ts3_plugin");
             const { spawn } = require('child_process');
             spawn(pathExe, [tfrPath]);
+          } else {
+            mainWindow.webContents.send('notif', {
+              title: "Erreur",
+              message: "Impossible de trouver le chemin",
+              type: "error",
+              duration: 10000
+            })
           }
         }
 
@@ -411,6 +423,13 @@ const setupIpcHandlers = async () => {
           console.error('Le répertoire des mods spécifié n\'existe pas.');
         }
         console.error('Lancement du jeu.');
+      } else {
+        mainWindow.webContents.send('notif', {
+          title: "Erreur",
+          message: "Impossible de trouver le chemin",
+          type: "error",
+          duration: 10000
+        })
       }
     
     })
@@ -443,6 +462,13 @@ const setupIpcHandlers = async () => {
               console.error(`Erreur lors de la suppression du fichier ${fileToDelete.name}:`, err);
           }
               
+        } else {
+          mainWindow.webContents.send('notif', {
+            title: "Erreur",
+            message: "Impossible de trouver le chemin",
+            type: "error",
+            duration: 10000
+          })
         }
       });
        
@@ -469,6 +495,10 @@ const setupIpcHandlers = async () => {
               overwrite: true,
               onProgress(progress) {
                 mainWindow.webContents.send('download-progress', progress.percent);
+                mainWindow.webContents.send('download-bytes', {
+                  transfer: progress.transferredBytes,
+                  total: progress.totalBytes,
+                });
 
               },
               onStarted(dl) { 
@@ -494,6 +524,13 @@ const setupIpcHandlers = async () => {
         await downloadFile(url, name)
         console.log('Téléchargement terminé.');
 
+      } else {
+        mainWindow.webContents.send('notif', {
+          title: "Erreur",
+          message: "Impossible de trouver le chemin",
+          type: "error",
+          duration: 10000
+        })
       }
         
       

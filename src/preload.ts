@@ -17,7 +17,7 @@ contextBridge.exposeInMainWorld('a3url', {
 
 contextBridge.exposeInMainWorld('ipcRenderer', {
   receive: (channel: string, func: (arg0: any) => any) => {
-    let validChannels = ['download-progress', 'download-name', 'app-ready', 'isdownload', 'download-stop', 'getVersion', 'player', 'notif'];
+    let validChannels = ['download-bytes','download-progress', 'download-name', 'app-ready', 'isdownload', 'download-stop', 'getVersion', 'player', 'notif'];
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (event: any, ...args: any) => func(...args));
     }
