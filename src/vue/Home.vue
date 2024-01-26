@@ -15,6 +15,7 @@
   <p id= "nombre" class="mt-2"></p>
   <p id ="name" class="mt-2"></p>
   <p id="transfer"></p>
+  
   <div v-if="isDown">
   
     <div :class="'inline-block mb-2 ms-[calc('+formatBar(downloadProgressPercent)+'-1.25rem)] py-0.5 px-1.5 bg-blue-50 border border-blue-200 text-xs font-medium text-blue-600 rounded-lg dark:bg-blue-800/30 dark:border-blue-800 dark:text-blue-500'">{{ formatBar(downloadProgressPercent) }}</div>
@@ -40,6 +41,7 @@ const downloadProgressPercent = ref(0);
 
 const transfer = ref(0);
 const total = ref(0);
+const time = ref(0);
 
 
 const isDown = ref(false);
@@ -51,7 +53,7 @@ onMounted(() => {
   window.ipcRenderer.receive('download-bytes', (data) => {
     transfer.value = data.transfer;
     total.value = data.total;
-    document.getElementById("transfer").innerHTML = `(${formatBytes(transfer.value)} / ${formatBytes(total.value)})`;
+    document.getElementById("transfer").innerHTML = `(${calculerVitesseTelechargement(time, data.total)} MiB/s)`;
   });
   window.ipcRenderer.receive('download-stop', (stpdwn) => {
     isDown.value = stpdwn;
@@ -65,16 +67,15 @@ onMounted(() => {
       isButtonDisabled.value = false;
     }
   });
-  window.ipcRenderer.receive('download-name', (name) => {
-    document.getElementById("name").innerHTML = "En téléchargement : " + name;
+  window.ipcRenderer.receive('download-name', (data) => {
+    time.value = data.time;
+    document.getElementById("name").innerHTML = "En téléchargement : " + data.name;
   });
 });
 const formatPercentage = (percentage) => {
-  // Formater le pourcentage avec deux décimales
   return (percentage * 100).toFixed(2) + '%';
 };
 const formatBar = (percentage) => {
-  // Formater le pourcentage avec deux décimales
   return (percentage * 100).toFixed(0) + '%';
 };
 const simpleFormat = (percentage) => {
@@ -96,6 +97,19 @@ function formatBytes(bytes, decimals = 2) {
 
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`
 }
+
+function calculerVitesseTelechargement(startTime, tailleFichierMo) {
+  const endTime = new Date().getTime();
+  const tempsEcouleSec = (endTime - startTime) / 1000;
+  const tailleFichierMb = tailleFichierMo * 8;
+  const vitesseTelechargementMbps = tailleFichierMb / tempsEcouleSec;
+
+  return vitesseTelechargementMbps.toFixed(2);
+}
+
+
+// Exemple d'utilisation
+
 
 const compareAndUpdate = async () => {
   if (!isReady.value) return;

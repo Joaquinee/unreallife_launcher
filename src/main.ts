@@ -494,6 +494,7 @@ const setupIpcHandlers = async () => {
               filename: name,
               overwrite: true,
               onProgress(progress) {
+
                 mainWindow.webContents.send('download-progress', progress.percent);
                 mainWindow.webContents.send('download-bytes', {
                   transfer: progress.transferredBytes,
@@ -501,8 +502,18 @@ const setupIpcHandlers = async () => {
                 });
 
               },
+           
               onStarted(dl) { 
-                mainWindow.webContents.send('download-name', dl.getFilename());
+                  
+                console.log(dl.getURL());
+                
+               
+                mainWindow.webContents.send('download-name', {
+                  name : dl.getFilename(),
+                  startTime : dl.getStartTime(),
+                })
+              
+                
                 mainWindow.webContents.send('isdownload', true);
               },
               onCompleted(dl) { 
@@ -704,4 +715,21 @@ async function compareData(serverData: any, clientData: any) {
       }
     }
     return addonsToUpdate;
+}
+
+function measureDownloadSpeed(fileUrl: string | URL | Request) {
+  const startTime = performance.now();
+
+  // Créer une requête pour récupérer le fichier
+  fetch(fileUrl)
+    .then(response => response.arrayBuffer())
+    .then(buffer => {
+      const endTime = performance.now();
+      const duration = endTime - startTime;
+      const fileSize = buffer.byteLength;
+
+      const downloadSpeed = (fileSize / duration) * 1000; // Convertir en octets par seconde
+      console.log(`Vitesse de téléchargement actuelle : ${downloadSpeed.toFixed(2)} octets par seconde`);
+    })
+    .catch(error => console.error('Erreur lors du téléchargement du fichier :', error));
 }
